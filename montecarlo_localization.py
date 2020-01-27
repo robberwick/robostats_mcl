@@ -118,8 +118,8 @@ class occupancy_map():
         self.range_array = np.load(self.range_filename)
 
     def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
-        x_loc = min(x_cm//10, 799)
-        y_loc = min(y_cm//10, 799)
+        x_loc = int(min(x_cm//10, 799))
+        y_loc = int(min(y_cm//10, 799))
         bucket_id_list_a, bucket_id_list_b =  theta_to_bucket_ids(theta_rads, n_buckets=n_buckets)
         
         if len(bucket_id_list_b) == 0: #Just return continuous array

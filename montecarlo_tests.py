@@ -19,16 +19,53 @@ import montecarlo_localization as mcl
 
 plt.style.use('ggplot')
 
-global_map = mcl.occupancy_map('data/map/wean.dat.gz')
-range_array = np.load('./data/range_array_40bin.npy')
-slice_theta_deg = 360/40
-fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(16, 6))
-for idx, ax in enumerate(fig.axes):
-    ax.imshow(range_array[:,:,idx].T, cmap=plt.cm.gray, interpolation='nearest',
-                  origin='lower', extent=(0,8000,0,8000), aspect='equal')
-    ax.set_ylim(2500,7500)
-    ax.set_xlim(0,8000)
-    ax.set_title("Theta = {:2.0f} deg".format(idx*slice_theta_deg))
-fig.tight_layout()
-fig.suptitle("Expected raycast distance at each map location, by angle.   White = high range.", size=16, y=0)
-mcl.plt.show()
+import matplotlib.animation as animation
+
+wean_hall_map = mcl.occupancy_map('data/map/wean.dat')
+print("1")
+logdata = mcl.load_log('data/log/robotdata1.log.gz')
+print("2")
+logdata_scans = logdata.query('type > 0.1')
+print("3")
+
+#Initialize 100 particles uniformly in valid locations on the map
+laser = mcl.laser_sensor(stdv_cm=20, uniform_weight=0.2)
+print("3")
+particle_list = [mcl.robot_particle(wean_hall_map, laser, log_prob_descale=100,
+                                    sigma_fwd_pct=0.3, sigma_theta_pct=0.2)
+                 for _ in range(300)]
+
+print("4")
+# Pre-run first couple steps - hard to draw on screen
+#for message in logdata_scans.values[:30:10]:
+#    particle_list = mcl.mcl_update(particle_list, message, 
+#                                    target_particles=300) # Update
+
+class ParticleMap(object):
+    def __init__(self, ax, global_map, particle_list):
+        self.ax = ax
+        self.global_map = global_map
+        self.particle_list = particle_list
+        mcl.draw_map_state(global_map, particle_list[::50], ax=self.ax)
+        self.i = 1
+
+    def update(self, message):
+        self.particle_list = mcl.mcl_update(self.particle_list, message, 
+                                            target_particles=300) # Update
+        if self.i % 20 == 0:# Plot every 10th message
+            plt.cla()        
+            mcl.draw_map_state(self.global_map, self.particle_list, self.ax)
+            #print(self.i, "  ", len(self.particle_list))
+            print(pd.Series([p.weight for p in particle_list]).describe())
+        self.i += 1
+
+fig, ax = plt.subplots()
+pmap = ParticleMap(ax, wean_hall_map, particle_list)
+
+print("5")
+#plt.show()
+# pass a generator in "emitter" to produce data for the update func
+ani = animation.FuncAnimation(fig, pmap.update, logdata_scans.values, interval=50,
+                              blit=False, repeat=False)
+print("6")
+plt.show()
