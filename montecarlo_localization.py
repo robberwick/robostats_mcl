@@ -129,6 +129,30 @@ class occupancy_map():
             arrayB = self.range_array[x_loc,y_loc,bucket_id_list_b[0]:bucket_id_list_b[-1]+1]
             return np.concatenate([arrayA, arrayB])
 
+class values_only_occupancy_map():
+    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy'):
+        self.map_filename = map_filename
+        #self.range_filename = range_filename
+        self.load_map()
+        
+    def load_map(self):
+        gmap = pd.read_csv(self.map_filename, sep=' ', header=None,
+                   skiprows=list(range(7)), )
+        gmap.drop(800, axis=1, inplace=True) # Drop garbage values
+        self.values = gmap.values
+        #self.range_array = np.load(self.range_filename)
+
+    #def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
+    #    x_loc = min(x_cm//10, 799)
+    #    y_loc = min(y_cm//10, 799)
+    #    bucket_id_list_a, bucket_id_list_b =  theta_to_bucket_ids(theta_rads, n_buckets=n_buckets)
+    #    
+    #    if len(bucket_id_list_b) == 0: #Just return continuous array
+    #        return self.range_array[x_loc,y_loc,bucket_id_list_a[0]:bucket_id_list_a[-1]+1]
+    #    else: # Need to stick together two arrays
+    #        arrayA = self.range_array[x_loc,y_loc,bucket_id_list_a[0]:bucket_id_list_a[-1]+1]
+    #        arrayB = self.range_array[x_loc,y_loc,bucket_id_list_b[0]:bucket_id_list_b[-1]+1]
+    #        return np.concatenate([arrayA, arrayB])
 
 def rads_to_bucket_id(rads, n_buckets=120):
     return int(((rads / (2*np.pi)) * n_buckets) % n_buckets)
@@ -296,8 +320,8 @@ class robot_particle():
         return self.pose
 
     def position_valid(self):
-        nearest_xindex = self.pose[0]//10
-        nearest_yindex = self.pose[1] //10
+        nearest_xindex = int(self.pose[0]//10)
+        nearest_yindex = int(self.pose[1]//10)
         try:
             # High map values = clear space ( > ~0.8), low values = obstacle
             if self.global_map.values[nearest_xindex, nearest_yindex] > 0.8:
@@ -404,7 +428,7 @@ def load_log(filepath, skiprows=0):
                     [n+1 for n in range(180)] + ['ts']
     scans.set_index('ts', inplace=True)
     # Join and sort logs
-    full_log = pd.concat([scans, odometry])
+    full_log = pd.concat([scans, odometry], sort=False)
     full_log.sort_index(inplace=True)
     reordered_data = full_log.reset_index()[['type','ts', 'x', 'y', 'theta', 'xl','yl', 'thetal'] + list(range(1,181))]
     # Remap laser -> 1.0,  odometry -> 0.0 to align datatype to float
