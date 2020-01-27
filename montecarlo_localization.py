@@ -113,7 +113,7 @@ class occupancy_map():
     def load_map(self):
         gmap = pd.read_csv(self.map_filename, sep=' ', header=None,
                    skiprows=list(range(7)), )
-        gmap.drop(800, axis=1, inplace=True) # Drop garbage values
+        #gmap.drop(800, axis=1, inplace=True) # Drop garbage values
         self.values = gmap.values
         self.range_array = np.load(self.range_filename)
 
@@ -138,21 +138,10 @@ class values_only_occupancy_map():
     def load_map(self):
         gmap = pd.read_csv(self.map_filename, sep=' ', header=None,
                    skiprows=list(range(7)), )
-        gmap.drop(800, axis=1, inplace=True) # Drop garbage values
+        #gmap.drop(800, axis=1, inplace=True) # Drop garbage values
         self.values = gmap.values
         #self.range_array = np.load(self.range_filename)
 
-    #def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
-    #    x_loc = min(x_cm//10, 799)
-    #    y_loc = min(y_cm//10, 799)
-    #    bucket_id_list_a, bucket_id_list_b =  theta_to_bucket_ids(theta_rads, n_buckets=n_buckets)
-    #    
-    #    if len(bucket_id_list_b) == 0: #Just return continuous array
-    #        return self.range_array[x_loc,y_loc,bucket_id_list_a[0]:bucket_id_list_a[-1]+1]
-    #    else: # Need to stick together two arrays
-    #        arrayA = self.range_array[x_loc,y_loc,bucket_id_list_a[0]:bucket_id_list_a[-1]+1]
-    #        arrayB = self.range_array[x_loc,y_loc,bucket_id_list_b[0]:bucket_id_list_b[-1]+1]
-    #        return np.concatenate([arrayA, arrayB])
 
 def rads_to_bucket_id(rads, n_buckets=120):
     return int(((rads / (2*np.pi)) * n_buckets) % n_buckets)
@@ -440,19 +429,19 @@ def draw_map_state(gmap, particle_list=None, ax=None, title="Wean Hall Map",
                    rotate=True, draw_max=2000):
     
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 10))
+        fig, ax = plt.subplots(figsize=(22, 22))
 
     if rotate:
         values = gmap.values.T
-        ax.set_ylim(2500,7500)
-        ax.set_xlim(0,8000)
     else:
         values = gmap.values
-        ax.set_ylim(0,8000)
-        ax.set_xlim(2500,7500)
 
-    ax.imshow(values, cmap=plt.cm.gray, interpolation='nearest',
-              origin='lower', extent=(0,8000,0,8000), aspect='equal')
+    y_max, x_max = values.shape
+    ax.set_ylim(0, y_max)
+    ax.set_xlim(0, x_max)
+
+    ax.imshow(values, cmap=plt.cm.gray, interpolation='none',
+              origin='lower', extent=(0,x_max,0,y_max), aspect='equal')
     ax.set_title(title)
     # Move left and bottom spines outward by 10 points
     ax.spines['left'].set_position(('outward', 10))
