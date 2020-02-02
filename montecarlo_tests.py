@@ -19,16 +19,17 @@ import montecarlo_localization as mcl
 
 plt.style.use('ggplot')
 
-import matplotlib.animation as animation
-
 global_map = mcl.occupancy_map('data/map/minesweeper.dat')
 logdata = mcl.load_log('data/log/minesweeper.log')
-#logdata_scans = logdata.query('type > 0.1')
+
+#global_map = mcl.occupancy_map('data/map/wean.dat')
+#logdata = mcl.load_log('data/log/robotdata1.log.gz')
+logdata_scans = logdata.query('type > 0.1')
 
 import matplotlib.animation as animation
 
 sensor = mcl.laser_sensor()
-particle = mcl.robot_particle(global_map, sensor)
+particle = mcl.robot_particle(global_map, sensor, initial_pose=(130, 100, 0.07))
 fig, ax = plt.subplots()
 
 def init():    

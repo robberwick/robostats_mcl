@@ -202,7 +202,7 @@ class robot_particle():
     
     def __init__(self, global_map, laser_sensor,
                  sigma_fwd_pct=.2, sigma_theta_pct=.05,
-                 log_prob_descale=60):
+                 log_prob_descale=60, initial_pose=None):
         """sigma_[x,y,theta]_pct  represents stddev of movement over 1 unit as percentage
             e.g., if true movement in X = 20cm, and sigma_x_pct=.1, then stddev = 2cm
             log_prob_descale affects magnitude of snesor updates:
@@ -215,19 +215,23 @@ class robot_particle():
         self.sigma_fwd_pct = sigma_fwd_pct
         self.sigma_theta_pct = sigma_theta_pct
         self.log_prob_descale = log_prob_descale
+        self.initial_pose = initial_pose
         self.init_pose()
 
     def init_pose(self):
         """particle poses stored in GLOBAL map frame"""
         # Ensure particles start in valid locations - re-sample if not
         self.prev_log_pose = None
-        theta_initial = np.random.uniform(-2*np.pi,2*np.pi)
         self.relative_pose = None
 
         valid_pose = False
         while not valid_pose:
-            x_initial, y_initial = np.random.uniform(0,180,2)
-            self.pose = np.array([x_initial,y_initial,theta_initial])
+            if not self.initial_pose:
+                theta_initial = np.random.uniform(-2*np.pi,2*np.pi)
+                x_initial, y_initial = np.random.uniform(0,4000,2)
+            else:
+                x_initial, y_initial, theta_initial = self.initial_pose
+            self.pose = np.array([x_initial, y_initial, theta_initial])
             valid_pose = self.position_valid()
 
     def update_measurement_likelihood(self, laser_msg):
@@ -437,11 +441,11 @@ def draw_map_state(gmap, particle_list=None, ax=None, title=None,
         values = gmap.values
 
     y_max, x_max = values.shape
-    ax.set_ylim(0, y_max)
-    ax.set_xlim(0, x_max)
+    ax.set_ylim(0, 180)
+    ax.set_xlim(0, 180)
 
-    ax.imshow(values, cmap=plt.cm.gray, interpolation='none',
-              origin='lower', extent=(0,x_max,0,y_max), aspect='equal')
+    ax.imshow(values, cmap=plt.cm.gray, interpolation='nearest',
+              origin='lower', extent=(0,180,0,180), aspect='equal')
     if not title: 
         ax.set_title(gmap.map_filename)
     else:
@@ -474,10 +478,12 @@ def plot_particle(particle, ax=None, pass_pose=False, color='b'):
         x, y, theta = particle.pose
 
     # 25cm is distance to actual sensor
-    xt = x + 25*np.cos(theta)
-    yt = y + 25*np.sin(theta)
+    direction_arrow_length = 5
+    bot_centre_circle_size = 4
+    xt = x + direction_arrow_length*np.cos(theta)
+    yt = y + direction_arrow_length*np.sin(theta)
     circle = patches.CirclePolygon((x,y),facecolor='none', edgecolor=color,
-                                   radius=25, resolution=20)
+                                   radius=bot_centre_circle_size, resolution=20)
     ax.add_artist(circle)  
     ax.plot([x, xt], [y, yt], color=color)
     return ax
