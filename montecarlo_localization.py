@@ -15,7 +15,7 @@ import copy
 from scipy.spatial import distance
 import base64
 from IPython.display import HTML
-
+import math
 
 def mcl_update(particle_list, msg, target_particles=300, 
                new_particles_per_round=0, resample=True):
@@ -292,13 +292,7 @@ class robot_particle():
         log_delta_y = new_log_pose[1] - self.prev_log_pose[1]
         log_delta_theta = new_log_pose[2] - self.prev_log_pose[2]
         # Fwd motion in log frame == Fwd motion in particle framea
-        #TODO: Change to x^2 + y^2 ??
-        cos_theta = np.cos(new_log_pose[2])
-        if cos_theta > 0.1:
-            fwd_motion = log_delta_x / cos_theta 
-        else:  # Avoid numerical instability with divide by ~0
-            fwd_motion = log_delta_y / np.sin(new_log_pose[2])
-
+        fwd_motion = math.sqrt(log_delta_x**2 + log_delta_y**2)
         # Calculate and add stochastic theta and forward error
         new_theta_error = log_delta_theta * self.sigma_theta_pct * np.random.normal()
         new_current_theta = self.pose[2] + log_delta_theta + new_theta_error
