@@ -29,7 +29,7 @@ logdata_scans = logdata.query('type > 0.1')
 import matplotlib.animation as animation
 
 sensor = mcl.laser_sensor()
-particle = mcl.robot_particle(global_map, sensor, initial_pose=(130, 100, 0.07))
+particle = mcl.robot_particle(global_map, sensor, initial_pose=(145, 75, 1.57))
 fig, ax = plt.subplots()
 
 def init():    
