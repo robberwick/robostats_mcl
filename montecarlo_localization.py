@@ -435,11 +435,12 @@ def draw_map_state(gmap, particle_list=None, ax=None, title=None,
         values = gmap.values
 
     y_max, x_max = values.shape
-    ax.set_ylim(0, 180)
-    ax.set_xlim(0, 180)
+    
+    ax.set_ylim(0, y_max * 10)
+    ax.set_xlim(0, x_max * 10)
 
     ax.imshow(values, cmap=plt.cm.gray, interpolation='nearest',
-              origin='lower', extent=(0,180,0,180), aspect='equal')
+              origin='lower', extent=(0,10 * x_max,0,10 * y_max), aspect='equal')
     if not title: 
         ax.set_title(gmap.map_filename)
     else:
