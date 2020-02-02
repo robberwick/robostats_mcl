@@ -226,7 +226,7 @@ class robot_particle():
 
         valid_pose = False
         while not valid_pose:
-            x_initial, y_initial = np.random.uniform(0,8000,2)
+            x_initial, y_initial = np.random.uniform(0,180,2)
             self.pose = np.array([x_initial,y_initial,theta_initial])
             valid_pose = self.position_valid()
 
@@ -425,7 +425,7 @@ def load_log(filepath, skiprows=0):
     return reordered_data
 
 
-def draw_map_state(gmap, particle_list=None, ax=None, title="Wean Hall Map",
+def draw_map_state(gmap, particle_list=None, ax=None, title=None,
                    rotate=True, draw_max=2000):
     
     if ax is None:
@@ -442,7 +442,10 @@ def draw_map_state(gmap, particle_list=None, ax=None, title="Wean Hall Map",
 
     ax.imshow(values, cmap=plt.cm.gray, interpolation='none',
               origin='lower', extent=(0,x_max,0,y_max), aspect='equal')
-    ax.set_title(title)
+    if not title: 
+        ax.set_title(gmap.map_filename)
+    else:
+        ax.set_title(title)
     # Move left and bottom spines outward by 10 points
     ax.spines['left'].set_position(('outward', 10))
     ax.spines['bottom'].set_position(('outward', 10))
