@@ -270,7 +270,7 @@ class robot_particle():
         # Laser located 25cm ahead of robot center (in x direction)
 
 
-       sensor_offsets = [[9.12, 2.42, 45], 
+        sensor_offsets = [[9.12, 2.42, 45], 
             [8.23, 3.69, 77.5], 
             [9.5, 7.3, 15], 
             [9.5, -7.3, -15], 
