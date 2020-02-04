@@ -117,6 +117,11 @@ class occupancy_map():
         self.values = gmap.values
         self.range_array = np.load(self.range_filename)
 
+    def ranges(self, x_cm, y_cm, theta_rads, n_buckets=120):
+        x_loc = int(min(x_cm//10, 799))
+        y_loc = int(min(y_cm//10, 799))
+        return self.range_array[x_loc,y_loc,rads_to_bucket_id(theta_rads)]
+ 
     def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
         x_loc = int(min(x_cm//10, 799))
         y_loc = int(min(y_cm//10, 799))
@@ -254,6 +259,46 @@ class robot_particle():
         # TODO: better handle massive down-scaling here (prob is often 1e-150 ~ 1e-250 !)
         self.weight = self.weight * np.exp(single_scan_log_prob / self.log_prob_descale) # Reduce by e^100
         return np.exp(single_scan_log_prob)
+
+    def T_update_measurement_likelihood(self, laser_msg):
+        """Returns a new particle weight 
+        High if actual measurement matches model"""
+        #TODO: Implemente real weighting
+        msg_range_indicies = list(range(8,16))
+        actual_measurement = laser_msg[msg_range_indicies]
+        #subsampled_measurements = actual_measurement[::3] # sample 3-degree increments
+        # Laser located 25cm ahead of robot center (in x direction)
+
+
+       sensor_offsets = [[9.12, 2.42, 45], 
+            [8.23, 3.69, 77.5], 
+            [9.5, 7.3, 15], 
+            [9.5, -7.3, -15], 
+            [9.12, -2.42, 45], 
+            [8.23, -3.69, -77.5],
+            [-8.75, 2.56, 135], 
+            [-8.75, -2.56, -135]]
+        
+        for sensor_number in range(8):
+            heading = self.pose[2]
+            sensor_x = self.pose[0] + sensor_offsets[sensor_number][0] * math.cos(heading) - sensor_offsets[sensor_number][1] * math.sin(heading)
+            sensor_y = self.pose[1] + sensor_offsets[sensor_number][0] * math.sin(heading) + sensor_offsets[sensor_number][1] * math.cos(heading)
+            sensor_theta = heading + math.radians(sensor_offsets[sensor_number][2])
+            expected_measurements[sensor_number] = self.global_map.ranges(sensor_x, sensor_y, sensor_theta)
+        
+        #original
+#        laser_pose_x = self.pose[0] + 25*np.cos(self.pose[2])
+#        laser_pose_y = self.pose[1] + 25*np.sin(self.pose[2])
+        #Expected measurements in 60 3-degree buckets, covering -90 to 90 degrees
+#        expected_measurements = self.global_map.ranges_180(laser_pose_x, laser_pose_y, self.pose[2])
+       
+        beam_probabilities = self.laser_sensor.measurement_probabilities(
+                                    actual_measurement, expected_measurements)
+        single_scan_log_prob = self.laser_sensor.full_scan_log_prob(beam_probabilities)
+
+        # TODO: better handle massive down-scaling here (prob is often 1e-150 ~ 1e-250 !)
+        self.weight = self.weight * np.exp(single_scan_log_prob / self.log_prob_descale) # Reduce by e^100
+        return np.exp(single_scan_log_prob)
     
     def sample_motion(self, msg):
         """Returns a new (sampled) x,y position for next timestep"""
@@ -340,7 +385,6 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
      x2 = x + int(max_dist * np.cos(theta))
      y2 = y + int(max_dist * np.sin(theta))
      # Short-circuit if inside wall
-     print (x, y)
      if global_map.values[x,y] < freespace_min_val :
         return x*10, y*10, 0
      steep = 0
