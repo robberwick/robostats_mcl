@@ -329,8 +329,8 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
      
      # Cast rays within 800x800 map (10cm * 800 X 10cm * 800)
 
-     x = x_cm//10
-     y = y_cm//10
+     x = int(x_cm//10)
+     y = int(y_cm//10)
      max_dist = max_dist_cm//10
 
      #TODO: Implement with x,y in range 0~800 - will be much faster.
@@ -340,6 +340,7 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
      x2 = x + int(max_dist * np.cos(theta))
      y2 = y + int(max_dist * np.sin(theta))
      # Short-circuit if inside wall
+     print (x, y)
      if global_map.values[x,y] < freespace_min_val :
         return x*10, y*10, 0
      steep = 0

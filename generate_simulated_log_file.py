@@ -18,25 +18,27 @@ with open(abs_file_path, mode='w') as log_file:
     interval = 0.1
         #sensor offsets are relative to chassis centre, in x, y and theta (anti-clockwise from forwards)
         #sensor indexes are 3, 4, 5, 6, 7, 1, 0, 2 from the front, clockwise
-    sensor_offsets = [[91.2, 24.2, 45], 
-        [82.3, 36.9, 77.5], 
-        [95, 7.3, 15], 
-        [95, -7.3, -15], 
-        [91.2, -24.2, 45], 
-        [82.3, -36.9, -77.5],
-        [-87.5, 25.6, 135], 
-        [-87.5, -25.6, -135]]
+    sensor_offsets = [[9.12, 2.42, 45], 
+        [8.23, 3.69, 77.5], 
+        [9.5, 7.3, 15], 
+        [9.5, -7.3, -15], 
+        [9.12, -2.42, 45], 
+        [8.23, -3.69, -77.5],
+        [-8.75, 2.56, 135], 
+        [-8.75, -2.56, -135]]
+    dist = [0] * 8
     for t in np.arange(start_time, end_time, interval):
         
         x =  55 * math.cos(0.4 * t)
         y =  55 * math.sin(0.4 * t)
         w = (0.4 * t + np.pi) % (2 * np.pi) - np.pi #removed + 0.5 np.pi
         log_writer.writerow(['O', x, y, w, t])
-        x_offset, y_offset, theta_offset = 145, 75, 1.57
+        x_offset, y_offset, theta_offset = 90, 90, 1.57
         for sensor_number in range(8):
             sensor_x = x + x_offset + sensor_offsets[sensor_number][0] * math.cos(w) - sensor_offsets[sensor_number][1] * math.sin(w)
             sensor_y = y + y_offset + sensor_offsets[sensor_number][0] * math.sin(w) + sensor_offsets[sensor_number][1] * math.cos(w)
             sensor_theta = w + theta_offset + math.radians(sensor_offsets[sensor_number][2])
-            print(sensor_x, sensor_y)
-            x, y, dist[sensor_number] = mcl.raycast_bresenham(sensor_x, sensor_y, sensor_theta, global_map)
+            print(sensor_offsets[sensor_number][0], sensor_offsets[sensor_number][1]) 
+            print(x, y, sensor_x, sensor_y, t)
+            wx, wy, dist[sensor_number] = mcl.raycast_bresenham(sensor_x, sensor_y, sensor_theta, global_map)
         log_writer.writerow(['L', x, y, w, x, y, w, dist[0], dist[1], dist[2], dist[3], dist[4], dist[5], dist[6], dist[7], t])
