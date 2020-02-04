@@ -38,7 +38,5 @@ with open(abs_file_path, mode='w') as log_file:
             sensor_x = x + x_offset + sensor_offsets[sensor_number][0] * math.cos(w) - sensor_offsets[sensor_number][1] * math.sin(w)
             sensor_y = y + y_offset + sensor_offsets[sensor_number][0] * math.sin(w) + sensor_offsets[sensor_number][1] * math.cos(w)
             sensor_theta = w + theta_offset + math.radians(sensor_offsets[sensor_number][2])
-            print(sensor_offsets[sensor_number][0], sensor_offsets[sensor_number][1]) 
-            print(x, y, sensor_x, sensor_y, t)
-            wx, wy, dist[sensor_number] = mcl.raycast_bresenham(sensor_x, sensor_y, sensor_theta, global_map)
+            _, _, dist[sensor_number] = mcl.raycast_bresenham(sensor_x, sensor_y, sensor_theta, global_map)
         log_writer.writerow(['L', x, y, w, x, y, w, dist[0], dist[1], dist[2], dist[3], dist[4], dist[5], dist[6], dist[7], t])
