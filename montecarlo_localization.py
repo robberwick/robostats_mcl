@@ -105,14 +105,14 @@ def sample_list_by_weight(list_to_sample, list_element_weights, randomize_order=
 
 
 class occupancy_map():
-    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy'):
+    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy', rowstoskip=list(range(7)), ):
         self.map_filename = map_filename
         self.range_filename = range_filename
-        self.load_map()
+        self.load_map(rowstoskip)
         
-    def load_map(self):
+    def load_map(self, rowstoskip):
         gmap = pd.read_csv(self.map_filename, sep=' ', header=None,
-                   skiprows=list(range(7)), )
+                   skiprows=rowstoskip, )
         #gmap.drop(800, axis=1, inplace=True) # Drop garbage values
         self.values = gmap.values
         self.range_array = np.load(self.range_filename)
@@ -135,14 +135,14 @@ class occupancy_map():
             return np.concatenate([arrayA, arrayB])
 
 class values_only_occupancy_map():
-    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy'):
+    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy', rowstoskip=list(range(7)), ):
         self.map_filename = map_filename
         #self.range_filename = range_filename
-        self.load_map()
+        self.load_map(rowstoskip)
         
-    def load_map(self):
+    def load_map(self, rowstoskip):
         gmap = pd.read_csv(self.map_filename, sep=' ', header=None,
-                   skiprows=list(range(7)), )
+                   skiprows=rowstoskip, )
         #gmap.drop(800, axis=1, inplace=True) # Drop garbage values
         self.values = gmap.values
         #self.range_array = np.load(self.range_filename)
