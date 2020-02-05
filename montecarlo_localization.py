@@ -105,12 +105,12 @@ def sample_list_by_weight(list_to_sample, list_element_weights, randomize_order=
 
 
 class occupancy_map():
-    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy', rowstoskip=1):
+    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy'):
         self.map_filename = map_filename
         self.range_filename = range_filename
-        self.load_map(rowstoskip)
+        self.load_map()
         
-    def load_map(self, rowstoskip):
+    def load_map(self):
         gmap = pd.read_csv(self.map_filename, sep=' ', header=None,skiprows=1)
         map_parameters = pd.read_csv(self.map_filename, sep=' ', header=None,nrows=1)
         self.resolution = map_parameters[0][0]
@@ -118,13 +118,15 @@ class occupancy_map():
         self.range_array = np.load(self.range_filename)
 
     def ranges(self, x_cm, y_cm, theta_rads):
-        x_loc = int(min(x_cm//self.resolution, 799))
-        y_loc = int(min(y_cm//self.resolution, 799))
+        x_max, y_max = self.global_map.values.shape
+        x_loc = int(min(x_cm//self.resolution, x_max))
+        y_loc = int(min(y_cm//self.resolution, y_max))
         return self.range_array[x_loc,y_loc,rads_to_bucket_id(theta_rads)]
  
     def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
-        x_loc = int(min(x_cm//self.resolution, 799))
-        y_loc = int(min(y_cm//self.resolution, 799))
+        x_max, y_max = self.global_map.values.shape
+        x_loc = int(min(x_cm//self.resolution, x_max))
+        y_loc = int(min(y_cm//self.resolution, y_max))
         bucket_id_list_a, bucket_id_list_b =  theta_to_bucket_ids(theta_rads, n_buckets=n_buckets)
         
         if len(bucket_id_list_b) == 0: #Just return continuous array
@@ -137,9 +139,9 @@ class occupancy_map():
 class values_only_occupancy_map():
     def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy'):
         self.map_filename = map_filename
-        self.load_map(rowstoskip)
+        self.load_map()
         
-    def load_map(self, rowstoskip):
+    def load_map(self):
         gmap = pd.read_csv(self.map_filename, sep=' ', header=None, skiprows=1)
         map_parameters = pd.read_csv(self.map_filename, sep=' ', header=None,nrows=1)
         self.resolution = map_parameters[0][0]
