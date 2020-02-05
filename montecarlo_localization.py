@@ -105,26 +105,26 @@ def sample_list_by_weight(list_to_sample, list_element_weights, randomize_order=
 
 
 class occupancy_map():
-    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy', rowstoskip=list(range(7)), ):
+    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy', rowstoskip=1):
         self.map_filename = map_filename
         self.range_filename = range_filename
         self.load_map(rowstoskip)
         
     def load_map(self, rowstoskip):
-        gmap = pd.read_csv(self.map_filename, sep=' ', header=None,
-                   skiprows=rowstoskip, )
-        #gmap.drop(800, axis=1, inplace=True) # Drop garbage values
+        gmap = pd.read_csv(self.map_filename, sep=' ', header=None,skiprows=1)
+        map_parameters = pd.read_csv(self.map_filename, sep=' ', header=None,nrows=1)
+        self.resolution = map_parameters[0][0]
         self.values = gmap.values
         self.range_array = np.load(self.range_filename)
 
-    def ranges(self, x_cm, y_cm, theta_rads, n_buckets=120):
-        x_loc = int(min(x_cm//10, 799))
-        y_loc = int(min(y_cm//10, 799))
+    def ranges(self, x_cm, y_cm, theta_rads):
+        x_loc = int(min(x_cm//self.resolution, 799))
+        y_loc = int(min(y_cm//self.resolution, 799))
         return self.range_array[x_loc,y_loc,rads_to_bucket_id(theta_rads)]
  
     def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
-        x_loc = int(min(x_cm//10, 799))
-        y_loc = int(min(y_cm//10, 799))
+        x_loc = int(min(x_cm//self.resolution, 799))
+        y_loc = int(min(y_cm//self.resolution, 799))
         bucket_id_list_a, bucket_id_list_b =  theta_to_bucket_ids(theta_rads, n_buckets=n_buckets)
         
         if len(bucket_id_list_b) == 0: #Just return continuous array
@@ -135,17 +135,15 @@ class occupancy_map():
             return np.concatenate([arrayA, arrayB])
 
 class values_only_occupancy_map():
-    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy', rowstoskip=list(range(7)), ):
+    def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy'):
         self.map_filename = map_filename
-        #self.range_filename = range_filename
         self.load_map(rowstoskip)
         
     def load_map(self, rowstoskip):
-        gmap = pd.read_csv(self.map_filename, sep=' ', header=None,
-                   skiprows=rowstoskip, )
-        #gmap.drop(800, axis=1, inplace=True) # Drop garbage values
+        gmap = pd.read_csv(self.map_filename, sep=' ', header=None, skiprows=1)
+        map_parameters = pd.read_csv(self.map_filename, sep=' ', header=None,nrows=1)
+        self.resolution = map_parameters[0][0]
         self.values = gmap.values
-        #self.range_array = np.load(self.range_filename)
 
 
 def rads_to_bucket_id(rads, n_buckets=120):
@@ -236,7 +234,9 @@ class robot_particle():
             else:
                 x_max, y_max = self.global_map.values.shape
                 theta_initial = np.random.uniform(-2*np.pi,2*np.pi)
-                x_initial, y_initial = np.random.uniform(0, x_max * 10), np.random.uniform(0, y_max * 10)
+                resolution = self.global_map.resolution
+                x_initial = np.random.uniform(0, x_max * self.global_map.resolution)
+                y_initial = np.random.uniform(0, y_max * self.global_map.resolution)
             self.pose = np.array([x_initial, y_initial, theta_initial])
             valid_pose = self.position_valid()
 
@@ -344,8 +344,8 @@ class robot_particle():
         return self.pose
 
     def position_valid(self):
-        nearest_xindex = int(self.pose[0]//10)
-        nearest_yindex = int(self.pose[1]//10)
+        nearest_xindex = int(self.pose[0]//self.global_map.resolution)
+        nearest_yindex = int(self.pose[1]//self.global_map.resolution)
         try:
             # High map values = clear space ( > ~0.8), low values = obstacle
             if self.global_map.values[nearest_xindex, nearest_yindex] > 0.8:
@@ -365,10 +365,10 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
      Ref: https://mail.scipy.org/pipermail/scipy-user/2009-September/022601.html"""
      
      # Cast rays within 800x800 map (10cm * 800 X 10cm * 800)
-
-     x = int(x_cm//10)
-     y = int(y_cm//10)
-     max_dist = max_dist_cm//10
+     res = global_map.resolution
+     x = int(x_cm//res)
+     y = int(y_cm//res)
+     max_dist = max_dist_cm//res
 
      #TODO: Implement with x,y in range 0~800 - will be much faster.
 
@@ -378,7 +378,7 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
      y2 = y + int(max_dist * np.sin(theta))
      # Short-circuit if inside wall
      if global_map.values[x,y] < freespace_min_val :
-        return x*10, y*10, 0
+        return x*res, y*res, 0
      steep = 0
      #coords = []
      dx = abs(x2 - x)
@@ -398,11 +398,11 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
              if steep: # X and Y have been swapped  #coords.append((y,x))
                 if global_map.values[y, x] < freespace_min_val:
                     dist = np.sqrt((y - x0)**2 + (x - y0)**2)
-                    return y*10, x*10, min(dist, max_dist)*10
+                    return y*res, x*res, min(dist, max_dist)*res
              else: #coords.append((x,y))
                 if global_map.values[x, y] < freespace_min_val:
                     dist = np.sqrt((x - x0)**2 + (y - y0)**2)
-                    return x*10, y*10, min(dist, max_dist)*10
+                    return x*res, y*res, min(dist, max_dist)*res
              while d >= 0:
                  y = y + sy
                  d = d - (2 * dx)
@@ -410,13 +410,13 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
              d = d + (2 * dy)
          if steep:
              dist = np.sqrt((y - x0)**2 + (x - y0)**2)
-             return y*10, x*10, min(dist, max_dist)*10
+             return y*res, x*res, min(dist, max_dist)*res
          else:
              dist = np.sqrt((x - x0)**2 + (y - y0)**2)
-             return x*10, y*10, min(dist, max_dist)*10
+             return x*res, y*res, min(dist, max_dist)*res
      except IndexError: # Out of range
         dist = np.sqrt((y - x0)**2 + (x - y0)**2)
-        return y*10, x*10, min(dist, max_dist)*10
+        return y*res, x*res, min(dist, max_dist)*res
 
 
 
@@ -462,7 +462,7 @@ def load_log(filepath, skiprows=0):
 
 def draw_map_state(gmap, particle_list=None, ax=None, title=None,
                    rotate=True, draw_max=2000):
-    
+    res = gmap.resolution
     if ax is None:
         fig, ax = plt.subplots(figsize=(22, 22))
 
@@ -473,11 +473,11 @@ def draw_map_state(gmap, particle_list=None, ax=None, title=None,
 
     y_max, x_max = values.shape
     
-    ax.set_ylim(0, y_max * 10)
-    ax.set_xlim(0, x_max * 10)
+    ax.set_ylim(0, y_max * res)
+    ax.set_xlim(0, x_max * res)
 
     ax.imshow(values, cmap=plt.cm.gray, interpolation='nearest',
-              origin='lower', extent=(0,10 * x_max,0,10 * y_max), aspect='equal')
+              origin='lower', extent=(0,res * x_max,0,res * y_max), aspect='equal')
     if not title: 
         ax.set_title(gmap.map_filename)
     else:
