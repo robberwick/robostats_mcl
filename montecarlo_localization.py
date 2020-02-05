@@ -231,11 +231,12 @@ class robot_particle():
 
         valid_pose = False
         while not valid_pose:
-            if not self.initial_pose:
-                theta_initial = np.random.uniform(-2*np.pi,2*np.pi)
-                x_initial, y_initial = np.random.uniform(0,4000,2)
-            else:
+            if self.initial_pose:
                 x_initial, y_initial, theta_initial = self.initial_pose
+            else:
+                x_max, y_max = self.global_map.values.shape
+                theta_initial = np.random.uniform(-2*np.pi,2*np.pi)
+                x_initial, y_initial = np.random.uniform(0, x_max * 10), np.random.uniform(0, y_max * 10)
             self.pose = np.array([x_initial, y_initial, theta_initial])
             valid_pose = self.position_valid()
 
@@ -266,9 +267,6 @@ class robot_particle():
         #TODO: Implemente real weighting
         msg_range_indicies = list(range(8,16))
         actual_measurement = laser_msg[msg_range_indicies]
-        #subsampled_measurements = actual_measurement[::3] # sample 3-degree increments
-        # Laser located 25cm ahead of robot center (in x direction)
-
 
         sensor_offsets = [[9.12, 2.42, 45], 
             [8.23, 3.69, 77.5], 
@@ -285,13 +283,7 @@ class robot_particle():
             sensor_y = self.pose[1] + sensor_offsets[sensor_number][0] * math.sin(heading) + sensor_offsets[sensor_number][1] * math.cos(heading)
             sensor_theta = heading + math.radians(sensor_offsets[sensor_number][2])
             expected_measurements[sensor_number] = self.global_map.ranges(sensor_x, sensor_y, sensor_theta)
-        
-        #original
-#        laser_pose_x = self.pose[0] + 25*np.cos(self.pose[2])
-#        laser_pose_y = self.pose[1] + 25*np.sin(self.pose[2])
-        #Expected measurements in 60 3-degree buckets, covering -90 to 90 degrees
-#        expected_measurements = self.global_map.ranges_180(laser_pose_x, laser_pose_y, self.pose[2])
-       
+               
         beam_probabilities = self.laser_sensor.measurement_probabilities(
                                     actual_measurement, expected_measurements)
         single_scan_log_prob = self.laser_sensor.full_scan_log_prob(beam_probabilities)
