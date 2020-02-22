@@ -466,7 +466,7 @@ def draw_map_state(gmap, particle_list=None, ax=None, title=None,
                    rotate=True, draw_max=2000):
     res = gmap.resolution
     if ax is None:
-        fig, ax = plt.subplots(figsize=(22, 22))
+        _, ax = plt.subplots(figsize=(22, 22))
 
     if rotate:
         values = gmap.values.T
