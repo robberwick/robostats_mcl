@@ -478,7 +478,7 @@ def draw_map_state(gmap, particle_list=None, ax=None, title=None,
     ax.set_ylim(0, y_max * res)
     ax.set_xlim(0, x_max * res)
 
-    ax.imshow(values, cmap=plt.cm.gray, interpolation='nearest',
+    ax.imshow(values, cmap=plt.get_cmap('gray'), interpolation='nearest',
               origin='lower', extent=(0,res * x_max,0,res * y_max), aspect='equal')
     if not title: 
         ax.set_title(gmap.map_filename)
