@@ -118,13 +118,13 @@ class occupancy_map():
         self.range_array = np.load(self.range_filename)
 
     def ranges(self, x_cm, y_cm, theta_rads):
-        x_max, y_max = self.global_map.values.shape
+        x_max, y_max = self.values.shape
         x_loc = int(min(x_cm//self.resolution, x_max))
         y_loc = int(min(y_cm//self.resolution, y_max))
         return self.range_array[x_loc,y_loc,rads_to_bucket_id(theta_rads)]
  
     def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
-        x_max, y_max = self.global_map.values.shape
+        x_max, y_max = self.values.shape
         x_loc = int(min(x_cm//self.resolution, x_max))
         y_loc = int(min(y_cm//self.resolution, y_max))
         bucket_id_list_a, bucket_id_list_b =  theta_to_bucket_ids(theta_rads, n_buckets=n_buckets)
@@ -236,7 +236,6 @@ class robot_particle():
             else:
                 x_max, y_max = self.global_map.values.shape
                 theta_initial = np.random.uniform(-2*np.pi,2*np.pi)
-                resolution = self.global_map.resolution
                 x_initial = np.random.uniform(0, x_max * self.global_map.resolution)
                 y_initial = np.random.uniform(0, y_max * self.global_map.resolution)
             self.pose = np.array([x_initial, y_initial, theta_initial])
@@ -269,6 +268,7 @@ class robot_particle():
         #TODO: Implemente real weighting
         msg_range_indicies = list(range(8,16))
         actual_measurement = laser_msg[msg_range_indicies]
+        expected_measurements = []
 
         sensor_offsets = [[9.12, 2.42, 45], 
             [8.23, 3.69, 77.5], 
@@ -396,7 +396,7 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
          sx,sy = sy,sx
      d = (2 * dy) - dx
      try:
-         for i in range(0,dx):
+         for _ in range(0, dx):
              if steep: # X and Y have been swapped  #coords.append((y,x))
                 if global_map.values[y, x] < freespace_min_val:
                     dist = np.sqrt((y - x0)**2 + (x - y0)**2)
@@ -466,7 +466,7 @@ def draw_map_state(gmap, particle_list=None, ax=None, title=None,
                    rotate=True, draw_max=2000):
     res = gmap.resolution
     if ax is None:
-        fig, ax = plt.subplots(figsize=(22, 22))
+        _, ax = plt.subplots(figsize=(22, 22))
 
     if rotate:
         values = gmap.values.T
@@ -478,7 +478,7 @@ def draw_map_state(gmap, particle_list=None, ax=None, title=None,
     ax.set_ylim(0, y_max * res)
     ax.set_xlim(0, x_max * res)
 
-    ax.imshow(values, cmap=plt.cm.gray, interpolation='nearest',
+    ax.imshow(values, cmap=plt.get_cmap('gray'), interpolation='nearest',
               origin='lower', extent=(0,res * x_max,0,res * y_max), aspect='equal')
     if not title: 
         ax.set_title(gmap.map_filename)
