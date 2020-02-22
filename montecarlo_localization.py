@@ -396,7 +396,7 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
          sx,sy = sy,sx
      d = (2 * dy) - dx
      try:
-         for i in range(0,dx):
+         for _ in range(0, dx):
              if steep: # X and Y have been swapped  #coords.append((y,x))
                 if global_map.values[y, x] < freespace_min_val:
                     dist = np.sqrt((y - x0)**2 + (x - y0)**2)
