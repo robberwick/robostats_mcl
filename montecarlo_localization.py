@@ -118,13 +118,13 @@ class occupancy_map():
         self.range_array = np.load(self.range_filename)
 
     def ranges(self, x_cm, y_cm, theta_rads):
-        x_max, y_max = self.global_map.values.shape
+        x_max, y_max = self.values.shape
         x_loc = int(min(x_cm//self.resolution, x_max))
         y_loc = int(min(y_cm//self.resolution, y_max))
         return self.range_array[x_loc,y_loc,rads_to_bucket_id(theta_rads)]
  
     def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
-        x_max, y_max = self.global_map.values.shape
+        x_max, y_max = self.values.shape
         x_loc = int(min(x_cm//self.resolution, x_max))
         y_loc = int(min(y_cm//self.resolution, y_max))
         bucket_id_list_a, bucket_id_list_b =  theta_to_bucket_ids(theta_rads, n_buckets=n_buckets)
