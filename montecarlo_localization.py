@@ -31,7 +31,7 @@ def mcl_update(particle_list, msg, target_particles=300,
             valid_particles.append(particle)
 
         if msg[0] > 0.1: # This message has a laser scan
-            particle.update_measurement_likelihood(msg)  # Update weight
+            particle.T_update_measurement_likelihood(msg)  # Update weight
 
     # SECOND: Re-sample particles in proportion to particle weight
     if msg[0] > 0.1 and resample: # This message has a laser scan
@@ -125,8 +125,8 @@ class occupancy_map():
  
     def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
         x_max, y_max = self.values.shape
-        x_loc = int(min(x_cm//self.resolution, x_max))
-        y_loc = int(min(y_cm//self.resolution, y_max))
+        x_loc = int(min(x_cm//self.resolution, x_max-1))
+        y_loc = int(min(y_cm//self.resolution, y_max-1))
         bucket_id_list_a, bucket_id_list_b =  theta_to_bucket_ids(theta_rads, n_buckets=n_buckets)
         
         if len(bucket_id_list_b) == 0: #Just return continuous array
@@ -171,7 +171,7 @@ def theta_to_bucket_ids(theta_rads, n_buckets=120):
 
 class laser_sensor():
     """Defines laser sensor with specific meaasurement model"""
-    def __init__(self, stdv_cm=40, max_range=8000,
+    def __init__(self, stdv_cm=10, max_range=8000,
                  uniform_weight=0.2):
         """Uniform probability added equivaent to 1/max_range"""
         assert 0.0 <= uniform_weight <= 1.0
@@ -268,7 +268,7 @@ class robot_particle():
         #TODO: Implemente real weighting
         msg_range_indicies = list(range(8,16))
         actual_measurement = laser_msg[msg_range_indicies]
-        expected_measurements = []
+        expected_measurements = [0,0,0,0,0,0,0,0]
 
         sensor_offsets = [[9.12, 2.42, 45], 
             [8.23, 3.69, 77.5], 
@@ -284,8 +284,9 @@ class robot_particle():
             sensor_x = self.pose[0] + sensor_offsets[sensor_number][0] * math.cos(heading) - sensor_offsets[sensor_number][1] * math.sin(heading)
             sensor_y = self.pose[1] + sensor_offsets[sensor_number][0] * math.sin(heading) + sensor_offsets[sensor_number][1] * math.cos(heading)
             sensor_theta = heading + math.radians(sensor_offsets[sensor_number][2])
+            #print(sensor_number)
             expected_measurements[sensor_number] = self.global_map.ranges(sensor_x, sensor_y, sensor_theta)
-               
+
         beam_probabilities = self.laser_sensor.measurement_probabilities(
                                     actual_measurement, expected_measurements)
         single_scan_log_prob = self.laser_sensor.full_scan_log_prob(beam_probabilities)
@@ -461,6 +462,43 @@ def load_log(filepath, skiprows=0):
     reordered_data['type'] = reordered_data['type'].map({'L':1, 'O':0})
     return reordered_data
 
+def load_T_log(filepath, skiprows=0):
+    """Log comes in two types:
+    Type O (remapped to 0.0):  
+    x y theta - coordinates of the robot in standard odometry frame
+    ts - timestamp of odometry reading (0 at start of run)
+
+    Type L  (remapped to 1.0):
+    x y theta - coodinates of the robot in standard odometry frame when
+    laser reading was taken (interpolated)
+    xl yl thetal - coordinates of the *laser* in standard odometry frame
+    when the laser reading was taken (interpolated)
+    1 .. 180 - 180 range readings of laser in cm.  The 8 readings span
+    180 degrees *STARTING FROM THE RIGHT AND GOING LEFT*  Just like angles,
+    the laser readings are in counterclockwise order.
+    ts - timestamp of laser reading
+    """
+    try:
+        raw_df = pd.read_csv(filepath, sep=' ',header=None)
+    except pd.parser.CParserError:
+        raw_df = pd.read_csv(filepath, sep=' ',header=None, skiprows=1)
+
+    # Extract and label odometry data
+    odometry = raw_df[raw_df[0] == 'O'][list(range(5))]
+    odometry.columns = ["type", "x", "y", "theta", "ts"]
+    odometry.set_index('ts', inplace=True)
+    # Extract and label laser scan data
+    scans = raw_df[raw_df[0] == 'L']
+    scans.columns = ['type', 'x', 'y', 'theta', 'xl', 'yl', 'thetal'] +\
+                    [n+1 for n in range(8)] + ['ts']
+    scans.set_index('ts', inplace=True)
+    # Join and sort logs
+    full_log = pd.concat([scans, odometry], sort=False)
+    full_log.sort_index(inplace=True)
+    reordered_data = full_log.reset_index()[['type','ts', 'x', 'y', 'theta', 'xl','yl', 'thetal'] + list(range(1,9))]
+    # Remap laser -> 1.0,  odometry -> 0.0 to align datatype to float
+    reordered_data['type'] = reordered_data['type'].map({'L':1, 'O':0})
+    return reordered_data
 
 def draw_map_state(gmap, particle_list=None, ax=None, title=None,
                    rotate=True, draw_max=2000):

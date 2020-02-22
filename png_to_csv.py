@@ -2,7 +2,7 @@ from PIL import Image, ImageOps, ImageEnhance
 import numpy as np
 import os, os.path, time
 import csv
-map = "minesweeper"
+map = "test_arena"
 folder = "data/map/" 
 file =  folder + map + ".png"
 image = ImageOps.grayscale(Image.open(file))

@@ -4,23 +4,23 @@ import pandas as pd
 import numpy as np
 import montecarlo_localization as mcl
 
-def main(filename='./mcl_log5_50l.mp4'):
+def main(filename='./mcl_test_arena.mp4'):
     
     np.random.seed(5)
-    wean_hall_map = mcl.occupancy_map('data/map/wean.dat')
-    logdata = mcl.load_log('data/log/robotdata1.log.gz')
+    loaded_map = mcl.occupancy_map('data/map/test_arena.dat')
+    logdata = mcl.load_T_log('data/log/test_arena.dat')
     logdata_scans = logdata.query('type > 0.1').values
 
     #Initialize 100 particles uniformly in valid locations on the map
-    laser = mcl.laser_sensor(stdv_cm=100, uniform_weight=0.2)
-    particle_list = [mcl.robot_particle(wean_hall_map, laser, log_prob_descale=2000,
-                                        sigma_fwd_pct=0.2, sigma_theta_pct=0.1)
-                     for _ in range(50000)]
+    laser = mcl.laser_sensor(stdv_cm=10, uniform_weight=0.2)
+    particle_list = [mcl.robot_particle(loaded_map, laser, log_prob_descale=2000,
+                                        sigma_fwd_pct=0.2, sigma_theta_pct=0.02)
+                     for _ in range(1000)]
 
     fig, ax = plt.subplots(figsize=(16,9))
 
-    pmap = ParticleMap(ax, wean_hall_map, particle_list,
-                       target_particles=300, draw_max=2000, resample_period=10)
+    pmap = ParticleMap(ax, loaded_map, particle_list,
+                       target_particles=300, draw_max=2000, resample_period=3)
 
     # pass a generator in "emitter" to produce data for the update func
     ani = animation.FuncAnimation(fig, pmap.update, logdata_scans, interval=50,

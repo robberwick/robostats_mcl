@@ -4,8 +4,8 @@ import numpy as np
 import montecarlo_localization as mcl
 import os, sys
 
-global_map = mcl.values_only_occupancy_map('data/map/minesweeper.dat')
-
+global_map = mcl.values_only_occupancy_map('data/map/test_arena.dat')
+print(os.path.basename(global_map.map_filename))
 def cache_map_ranges(theta_bins=120):
     slice_theta_rad = 2*np.pi/theta_bins
     slice_theta_deg = 360/theta_bins
