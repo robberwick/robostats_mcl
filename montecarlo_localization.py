@@ -269,6 +269,7 @@ class robot_particle():
         #TODO: Implemente real weighting
         msg_range_indicies = list(range(8,16))
         actual_measurement = laser_msg[msg_range_indicies]
+        expected_measurements = []
 
         sensor_offsets = [[9.12, 2.42, 45], 
             [8.23, 3.69, 77.5], 
