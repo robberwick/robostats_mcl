@@ -236,7 +236,6 @@ class robot_particle():
             else:
                 x_max, y_max = self.global_map.values.shape
                 theta_initial = np.random.uniform(-2*np.pi,2*np.pi)
-                resolution = self.global_map.resolution
                 x_initial = np.random.uniform(0, x_max * self.global_map.resolution)
                 y_initial = np.random.uniform(0, y_max * self.global_map.resolution)
             self.pose = np.array([x_initial, y_initial, theta_initial])
