@@ -12,6 +12,7 @@ laser sensor parameters
 robot_particle
 *log_prob_descale
 *sigma_fwd_pct=0.2
+**fraction of travel that is used as the standard deviation of the error added to forward travel
 *sigma_theta_pct=0.02
 
 ParticleMap parameters

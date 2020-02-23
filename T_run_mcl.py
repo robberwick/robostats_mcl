@@ -10,22 +10,18 @@ def main(filename='./mcl_test_arena.mp4'):
     loaded_map = mcl.occupancy_map('data/map/test_arena.dat')
     logdata = mcl.load_T_log('data/log/test_arena.dat')
     logdata_scans = logdata.query('type > 0.1').values
-
     #Initialize 100 particles uniformly in valid locations on the map
     laser = mcl.laser_sensor(stdv_cm=10, uniform_weight=0.2)
     particle_list = [mcl.robot_particle(loaded_map, laser, log_prob_descale=2000,
-                                        sigma_fwd_pct=0.2, sigma_theta_pct=0.02)
+                                        sigma_fwd_pct=1.5, sigma_theta_pct=0.03)
                      for _ in range(1000)]
 
     fig, ax = plt.subplots(figsize=(16,9))
-
     pmap = ParticleMap(ax, loaded_map, particle_list,
                        target_particles=300, draw_max=2000, resample_period=3)
-
     # pass a generator in "emitter" to produce data for the update func
     ani = animation.FuncAnimation(fig, pmap.update, logdata_scans, interval=50,
                                   blit=False, repeat=False)
-
     print("Saving video to file: ", filename)
     ani.save(filename, dpi=100, fps=10, extra_args=['-vcodec', 'libx264', '-pix_fmt', 'yuv420p'])
     plt.close('all')
@@ -44,6 +40,7 @@ class ParticleMap(object):
         self.resample_period = resample_period
 
     def update(self, message):
+        print(self.i)
         if self.i % self.resample_period == 0:# Resample and plot state
             self.particle_list = mcl.mcl_update(self.particle_list, message, resample=True,
                                                 target_particles=self.target_particles) # Update

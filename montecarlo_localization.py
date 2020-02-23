@@ -171,7 +171,7 @@ def theta_to_bucket_ids(theta_rads, n_buckets=120):
 
 class laser_sensor():
     """Defines laser sensor with specific meaasurement model"""
-    def __init__(self, stdv_cm=10, max_range=8000,
+    def __init__(self, stdv_cm=100, max_range=8000,
                  uniform_weight=0.2):
         """Uniform probability added equivaent to 1/max_range"""
         assert 0.0 <= uniform_weight <= 1.0
@@ -284,7 +284,6 @@ class robot_particle():
             sensor_x = self.pose[0] + sensor_offsets[sensor_number][0] * math.cos(heading) - sensor_offsets[sensor_number][1] * math.sin(heading)
             sensor_y = self.pose[1] + sensor_offsets[sensor_number][0] * math.sin(heading) + sensor_offsets[sensor_number][1] * math.cos(heading)
             sensor_theta = heading + math.radians(sensor_offsets[sensor_number][2])
-            #print(sensor_number)
             expected_measurements[sensor_number] = self.global_map.ranges(sensor_x, sensor_y, sensor_theta)
 
         beam_probabilities = self.laser_sensor.measurement_probabilities(
