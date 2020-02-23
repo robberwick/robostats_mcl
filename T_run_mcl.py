@@ -5,6 +5,7 @@ import matplotlib.animation as animation
 import pandas as pd
 import numpy as np
 import montecarlo_localization as mcl
+from progress.bar import Bar
 
 def main(video_file=None, map_file=None, log_file=None, range_file=None):
 
@@ -24,21 +25,23 @@ def main(video_file=None, map_file=None, log_file=None, range_file=None):
 
     fig, ax = plt.subplots(figsize=(16,9))
 
-    pmap = ParticleMap(ax, loaded_map, particle_list,
+    print("Saving video to file: ", video_file)
+
+    pmap = ParticleMap(ax, loaded_map, particle_list, logdata_scans,
                        target_particles=300, draw_max=2000, resample_period=3)
+
 
     # pass a generator in "emitter" to produce data for the update func
     ani = animation.FuncAnimation(fig, pmap.update, logdata_scans, interval=50,
                                   blit=False, repeat=False)
 
-    print("Saving video to file: ", video_file)
     ani.save(video_file, dpi=100, fps=10, extra_args=['-vcodec', 'libx264', '-pix_fmt', 'yuv420p'])
     plt.close('all')
 
 
 
 class ParticleMap(object):
-    def __init__(self, ax, global_map, particle_list, target_particles=300,  draw_max=2000, resample_period=10):
+    def __init__(self, ax, global_map, particle_list, values, target_particles=300,  draw_max=2000, resample_period=10, ):
         self.ax = ax
         self.draw_max = draw_max
         self.global_map = global_map
@@ -47,6 +50,9 @@ class ParticleMap(object):
         self.i = 1
         self.target_particles = target_particles
         self.resample_period = resample_period
+        self.values = values
+        self.bar = Bar('Processing', max=len(values), suffix='%(index)d/%(max)d - %(percent)d%%')
+
 
     def update(self, message):
         if self.i % self.resample_period == 0:# Resample and plot state
@@ -59,6 +65,9 @@ class ParticleMap(object):
             self.particle_list = mcl.mcl_update(self.particle_list, message,
                                                 target_particles=self.target_particles) # Update
         self.i += 1
+        self.bar.next()
+        if self.i == len(self.values) + 1:
+            self.bar.finish()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
