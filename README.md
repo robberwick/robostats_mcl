@@ -1,5 +1,31 @@
-# robostats_mcl
-Python implementation of Monte Carlo Localization (Particle Filter) for the CMU course Statistical Techniques in Robotics
+fork of sjobeek:master, adapted for Tauradigm, a piwars entry.
 
-# Contents
-Please see [Robostats Assignment Writeup.ipynb](https://github.com/sjobeek/robostats_mcl/blob/master/Robostats%20Assignment%20Writeup.ipynb) for a discussion of the localization system.
+
+Parameters that need tunign to the hardware
+
+
+in T_run_mcl
+laser sensor parameters
+*stdev_cm = 10
+*uniform_weight = 0.2
+
+robot_particle
+*log_prob_descale
+*sigma_fwd_pct=0.2
+**fraction of travel that is used as the standard deviation of the error added to forward travel
+*sigma_theta_pct=0.02
+
+ParticleMap parameters
+*target_particles = 300
+*draw_max=2000
+*resample_period=3
+
+
+
+in montecarlo_localisation
+mcl_update
+*if sum(particle_list_weights) < 0.01
+
+robot_particle
+T_update_measurement_likelihood
+*sensor offsets

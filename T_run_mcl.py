@@ -16,11 +16,10 @@ def main(video_file=None, map_file=None, log_file=None, range_file=None):
     loaded_map = mcl.occupancy_map(map_file, range_filename=range_file)
     logdata = mcl.load_T_log(log_file)
     logdata_scans = logdata.query('type > 0.1').values
-
     #Initialize 100 particles uniformly in valid locations on the map
     laser = mcl.laser_sensor(stdv_cm=10, uniform_weight=0.2)
     particle_list = [mcl.robot_particle(loaded_map, laser, log_prob_descale=2000,
-                                        sigma_fwd_pct=0.2, sigma_theta_pct=0.02)
+                                        sigma_fwd_pct=1.5, sigma_theta_pct=0.03)
                      for _ in range(1000)]
 
     fig, ax = plt.subplots(figsize=(16,9))
@@ -55,6 +54,7 @@ class ParticleMap(object):
 
 
     def update(self, message):
+        print(self.i)
         if self.i % self.resample_period == 0:# Resample and plot state
             self.particle_list = mcl.mcl_update(self.particle_list, message, resample=True,
                                                 target_particles=self.target_particles) # Update
