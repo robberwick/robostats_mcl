@@ -3,10 +3,11 @@
 
 # Need to sample:
 #   Motion model for particle (given location of particle, map)
-#           Motion model (in this case) comes from log + noise. 
+#           Motion model (in this case) comes from log + noise.
 #   Measurement model for particle (given location, map)
 #           True measurements come from log
 
+import csv
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,12 +17,30 @@ from scipy.spatial import distance
 import base64
 from IPython.display import HTML
 import math
+from io import StringIO
 
-def mcl_update(particle_list, msg, target_particles=300, 
+def remap_log(filename):
+    new_order = [19, 20, 18, 19, 20, 18, 1, 2, 3, 4, 5, 6, 7, 8]
+    output = StringIO()
+    with open(filename, "r") as csvfile:
+        datareader = csv.reader(csvfile)
+        start_time = 0
+        for i, row in enumerate(datareader):
+            ts = float(row[0])
+            if i==0:
+                start_time = ts
+            new_row = [ row[index] for index in new_order]
+            new_row = ['L'] + new_row + [str(ts - start_time)]
+            output.write(' '.join(new_row))
+            output.write('\n')
+    output.seek(0)
+    return output
+
+def mcl_update(particle_list, msg, target_particles=300,
                new_particles_per_round=0, resample=True):
     # msg: ['type','ts', 'x', 'y', 'theta', 'xl','yl', 'thetal', r1~r180]
     # 'type' is 1.0 for laser scan, 0.0 for odometry-only
-    
+
     # FIRST: Update locations and weights of particles
     valid_particles = []
     for particle in particle_list:
@@ -41,21 +60,21 @@ def mcl_update(particle_list, msg, target_particles=300,
         if sum(particle_list_weights) < 0.01:
             renormalize_particle_weights(valid_particles)
 
-        new_particle_list = sample_list_by_weight(valid_particles, particle_list_weights, 
-                                                  max_target_particles=target_particles) 
+        new_particle_list = sample_list_by_weight(valid_particles, particle_list_weights,
+                                                  max_target_particles=target_particles)
         if new_particles_per_round > 0:
             # Add a few new particles with average weights
             P = new_particle_list[0]  # Using same initialization as other particles
             new_particle_list_weights = [p.weight for p in new_particle_list]
             for _ in range(new_particles_per_round):
-                new_particle = robot_particle(P.global_map, P.laser_sensor, 
+                new_particle = robot_particle(P.global_map, P.laser_sensor,
                                               P.sigma_fwd_pct, P.sigma_theta_pct,
                                               P.log_prob_descale)
                 new_particle.weight = np.average(new_particle_list_weights)
                 new_particle_list.append(new_particle)
     else:
         new_particle_list = valid_particles
-        
+
     # THIRD: Spaw more particles if low
     list_len = len(new_particle_list)
     while list_len < target_particles:
@@ -65,7 +84,7 @@ def mcl_update(particle_list, msg, target_particles=300,
             list_len = len(new_particle_list)
 
     # Add a few new particles each round
-    
+
 
     return new_particle_list
 
@@ -93,7 +112,7 @@ def sample_list_by_weight(list_to_sample, list_element_weights, randomize_order=
             if count == 1:
                 new_sampled_list.append(list_to_sample[idx])
             elif count < 3 or total_particles < max_target_particles: # Stop duplicating if max reached
-                # Need to add copies to new list, not just identical references! 
+                # Need to add copies to new list, not just identical references!
                 new_particle = copy.copy(list_to_sample[idx])
                 if perturb:
                     new_particle.new_pose_from_sample_error(10)
@@ -109,7 +128,7 @@ class occupancy_map():
         self.map_filename = map_filename
         self.range_filename = range_filename
         self.load_map()
-        
+
     def load_map(self):
         gmap = pd.read_csv(self.map_filename, sep=' ', header=None,skiprows=1)
         map_parameters = pd.read_csv(self.map_filename, sep=' ', header=None,nrows=1)
@@ -122,13 +141,13 @@ class occupancy_map():
         x_loc = int(min(x_cm//self.resolution, x_max))
         y_loc = int(min(y_cm//self.resolution, y_max))
         return self.range_array[x_loc,y_loc,rads_to_bucket_id(theta_rads)]
- 
+
     def ranges_180(self, x_cm, y_cm, theta_rads, n_buckets=120):
         x_max, y_max = self.values.shape
         x_loc = int(min(x_cm//self.resolution, x_max-1))
         y_loc = int(min(y_cm//self.resolution, y_max-1))
         bucket_id_list_a, bucket_id_list_b =  theta_to_bucket_ids(theta_rads, n_buckets=n_buckets)
-        
+
         if len(bucket_id_list_b) == 0: #Just return continuous array
             return self.range_array[x_loc,y_loc,bucket_id_list_a[0]:bucket_id_list_a[-1]+1]
         else: # Need to stick together two arrays
@@ -140,7 +159,7 @@ class values_only_occupancy_map():
     def __init__(self, map_filename, range_filename='./data/range_array_120bin.npy'):
         self.map_filename = map_filename
         self.load_map()
-        
+
     def load_map(self):
         gmap = pd.read_csv(self.map_filename, sep=' ', header=None, skiprows=1)
         map_parameters = pd.read_csv(self.map_filename, sep=' ', header=None,nrows=1)
@@ -152,7 +171,7 @@ def rads_to_bucket_id(rads, n_buckets=120):
     return int(((rads / (2*np.pi)) * n_buckets) % n_buckets)
 
 def theta_to_bucket_ids(theta_rads, n_buckets=120):
-    """Returns the bucket ids corresponding to 
+    """Returns the bucket ids corresponding to
     -90 deg. to +90 deg around robot heading.
     All parametrs use radians."""
     start_theta = theta_rads - np.pi/2
@@ -181,7 +200,7 @@ class laser_sensor():
         self.max_range = max_range
 
         # Create scaling factor for total probabilities
-        perfect_match_probs = self.measurement_probabilities(np.array(list(range(10))), 
+        perfect_match_probs = self.measurement_probabilities(np.array(list(range(10))),
                                                               np.array(list(range(10))))
         self.measurement_prob_scaling_factor = 1/perfect_match_probs[0]
         pass
@@ -191,7 +210,7 @@ class laser_sensor():
         # Bring probability constant into exp term:  ae^x = e^(x + log(a))
         prob_normal_array = (1/(np.sqrt(2*np.pi*self.stdv_cm)) *
                              np.exp((-1 / (2 * self.stdv_cm)) * squared_diff_array))
-                                
+
         weighted_probs = (self.normal_weight * prob_normal_array +
                           self.uniform_weight * (1 / self.max_range))
         return weighted_probs
@@ -204,7 +223,7 @@ class laser_sensor():
 
 
 class robot_particle():
-    
+
     def __init__(self, global_map, laser_sensor,
                  sigma_fwd_pct=.2, sigma_theta_pct=.05,
                  log_prob_descale=60, initial_pose=None):
@@ -214,7 +233,7 @@ class robot_particle():
                     low values = each sensor update hugely affects weights
                     high values (~1000) each sensor update gradually affects weights"""
         self.weight = 1.0 # Default initial weight
-        
+
         self.global_map = global_map
         self.laser_sensor = laser_sensor
         self.sigma_fwd_pct = sigma_fwd_pct
@@ -242,7 +261,7 @@ class robot_particle():
             valid_pose = self.position_valid()
 
     def update_measurement_likelihood(self, laser_msg):
-        """Returns a new particle weight 
+        """Returns a new particle weight
         High if actual measurement matches model"""
         #TODO: Implemente real weighting
         msg_range_indicies = list(range(8,188))
@@ -253,7 +272,7 @@ class robot_particle():
         laser_pose_y = self.pose[1] + 25*np.sin(self.pose[2])
         #Expected measurements in 60 3-degree buckets, covering -90 to 90 degrees
         expected_measurements = self.global_map.ranges_180(laser_pose_x, laser_pose_y, self.pose[2])
-       
+
         beam_probabilities = self.laser_sensor.measurement_probabilities(
                                     subsampled_measurements, expected_measurements)
         single_scan_log_prob = self.laser_sensor.full_scan_log_prob(beam_probabilities)
@@ -263,22 +282,22 @@ class robot_particle():
         return np.exp(single_scan_log_prob)
 
     def T_update_measurement_likelihood(self, laser_msg):
-        """Returns a new particle weight 
+        """Returns a new particle weight
         High if actual measurement matches model"""
         #TODO: Implemente real weighting
         msg_range_indicies = list(range(8,16))
         actual_measurement = laser_msg[msg_range_indicies]
         expected_measurements = [0,0,0,0,0,0,0,0]
 
-        sensor_offsets = [[9.12, 2.42, 45], 
-            [8.23, 3.69, 77.5], 
-            [9.5, 7.3, 15], 
-            [9.5, -7.3, -15], 
-            [9.12, -2.42, 45], 
+        sensor_offsets = [[9.12, 2.42, 45],
+            [8.23, 3.69, 77.5],
+            [9.5, 7.3, 15],
+            [9.5, -7.3, -15],
+            [9.12, -2.42, 45],
             [8.23, -3.69, -77.5],
-            [-8.75, 2.56, 135], 
+            [-8.75, 2.56, 135],
             [-8.75, -2.56, -135]]
-        
+
         for sensor_number in range(8):
             heading = self.pose[2]
             sensor_x = self.pose[0] + sensor_offsets[sensor_number][0] * math.cos(heading) - sensor_offsets[sensor_number][1] * math.sin(heading)
@@ -294,7 +313,7 @@ class robot_particle():
         # TODO: better handle massive down-scaling here (prob is often 1e-150 ~ 1e-250 !)
         self.weight = self.weight * np.exp(single_scan_log_prob / self.log_prob_descale) # Reduce by e^100
         return np.exp(single_scan_log_prob)
-    
+
     def sample_motion(self, msg):
         """Returns a new (sampled) x,y position for next timestep"""
         # msg: ['type','ts', 'x', 'y', 'theta', 'xl','yl', 'thetal', r1~r180]
@@ -317,7 +336,7 @@ class robot_particle():
             new_current_theta = self.pose[2] + new_theta_error
             # Wrap radians to enforce range 0 to 2pi
             new_current_theta = new_current_theta % (2*np.pi)
-            
+
             new_current_x = self.pose[0] + scale * self.sigma_fwd_pct * np.random.normal()
             new_current_y = self.pose[1] + scale * self.sigma_fwd_pct * np.random.normal()
             self.pose = np.array([new_current_x, new_current_y, new_current_theta])
@@ -338,7 +357,7 @@ class robot_particle():
         new_current_theta = self.pose[2] + log_delta_theta + new_theta_error
         # Wrap radians to enforce range 0 to 2pi
         new_current_theta = new_current_theta % (2*np.pi)
-        
+
         fwd_motion_error = fwd_motion * self.sigma_fwd_pct * np.random.normal()
         fwd_motion += fwd_motion_error
         new_current_x = self.pose[0] + fwd_motion * np.cos(new_current_theta)
@@ -362,11 +381,11 @@ class robot_particle():
 def raycast_bresenham(x_cm, y_cm, theta, global_map,
                       freespace_min_val=0.5, max_dist_cm=8183):
      """Brensenham line algorithm
-     Input: x,y in cm, theta in radians, 
+     Input: x,y in cm, theta in radians,
             global_map with 800x800 10-cm occupancy grid
 
      Ref: https://mail.scipy.org/pipermail/scipy-user/2009-September/022601.html"""
-     
+
      # Cast rays within 800x800 map (10cm * 800 X 10cm * 800)
      res = global_map.resolution
      x = int(x_cm//res)
@@ -426,7 +445,7 @@ def raycast_bresenham(x_cm, y_cm, theta, global_map,
 
 def load_log(filepath, skiprows=0):
     """Log comes in two types:
-    Type O (remapped to 0.0):  
+    Type O (remapped to 0.0):
     x y theta - coordinates of the robot in standard odometry frame
     ts - timestamp of odometry reading (0 at start of run)
 
@@ -464,7 +483,7 @@ def load_log(filepath, skiprows=0):
 
 def load_T_log(filepath, skiprows=0):
     """Log comes in two types:
-    Type O (remapped to 0.0):  
+    Type O (remapped to 0.0):
     x y theta - coordinates of the robot in standard odometry frame
     ts - timestamp of odometry reading (0 at start of run)
 
@@ -479,9 +498,9 @@ def load_T_log(filepath, skiprows=0):
     ts - timestamp of laser reading
     """
     try:
-        raw_df = pd.read_csv(filepath, sep=' ',header=None)
+        raw_df = pd.read_csv(remap_log(filepath), sep=' ',header=None)
     except pd.parser.CParserError:
-        raw_df = pd.read_csv(filepath, sep=' ',header=None, skiprows=1)
+        raw_df = pd.read_csv(remap_log(filepath), sep=' ',header=None, skiprows=1)
 
     # Extract and label odometry data
     odometry = raw_df[raw_df[0] == 'O'][list(range(5))]
@@ -512,13 +531,13 @@ def draw_map_state(gmap, particle_list=None, ax=None, title=None,
         values = gmap.values
 
     y_max, x_max = values.shape
-    
+
     ax.set_ylim(0, y_max * res)
     ax.set_xlim(0, x_max * res)
 
     ax.imshow(values, cmap=plt.get_cmap('gray'), interpolation='nearest',
               origin='lower', extent=(0,res * x_max,0,res * y_max), aspect='equal')
-    if not title: 
+    if not title:
         ax.set_title(gmap.map_filename)
     else:
         ax.set_title(title)
@@ -531,7 +550,7 @@ def draw_map_state(gmap, particle_list=None, ax=None, title=None,
     # Only show ticks on the left and bottom spines
     ax.yaxis.set_ticks_position('left')
     ax.xaxis.set_ticks_position('bottom')
-    
+
     if particle_list is not None:
         for i, particle in enumerate(particle_list):
             if i >= draw_max:
@@ -556,7 +575,7 @@ def plot_particle(particle, ax=None, pass_pose=False, color='b'):
     yt = y + direction_arrow_length*np.sin(theta)
     circle = patches.CirclePolygon((x,y),facecolor='none', edgecolor=color,
                                    radius=bot_centre_circle_size, resolution=20)
-    ax.add_artist(circle)  
+    ax.add_artist(circle)
     ax.plot([x, xt], [y, yt], color=color)
     return ax
 
