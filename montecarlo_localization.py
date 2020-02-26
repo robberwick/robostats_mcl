@@ -348,14 +348,18 @@ class robot_particle():
     def position_valid(self):
         nearest_xindex = int(self.pose[0]//self.global_map.resolution)
         nearest_yindex = int(self.pose[1]//self.global_map.resolution)
+        nearest_xindex = max(nearest_xindex, 0)
+        nearest_yindex = max(nearest_yindex, 0)
         try:
             # High map values = clear space ( > ~0.8), low values = obstacle
             if self.global_map.values[nearest_xindex, nearest_yindex] > 0.8:
                 return True
             else:
-                return False
+                self.weight = self.weight / 10000
+                return True
         except IndexError:
-            return False
+            self.weight = self.weight / 10000
+            return True
 
 
 def raycast_bresenham(x_cm, y_cm, theta, global_map,

@@ -3,6 +3,7 @@ import matplotlib.animation as animation
 import pandas as pd
 import numpy as np
 import montecarlo_localization as mcl
+import os, sys
 
 def main(filename='./mcl_test_arena.mp4'):
     
@@ -11,14 +12,14 @@ def main(filename='./mcl_test_arena.mp4'):
     logdata = mcl.load_T_log('data/log/test_arena.dat')
     logdata_scans = logdata.query('type > 0.1').values
     #Initialize 100 particles uniformly in valid locations on the map
-    laser = mcl.laser_sensor(stdv_cm=10, uniform_weight=0.2)
+    laser = mcl.laser_sensor(stdv_cm=2, uniform_weight=0.2)
     particle_list = [mcl.robot_particle(loaded_map, laser, log_prob_descale=2000,
-                                        sigma_fwd_pct=1.5, sigma_theta_pct=0.03)
+                                        sigma_fwd_pct=0.8, sigma_theta_pct=0.02)
                      for _ in range(1000)]
 
     fig, ax = plt.subplots(figsize=(16,9))
     pmap = ParticleMap(ax, loaded_map, particle_list,
-                       target_particles=300, draw_max=2000, resample_period=3)
+                       target_particles=300, draw_max=2000, resample_period=1)
     # pass a generator in "emitter" to produce data for the update func
     ani = animation.FuncAnimation(fig, pmap.update, logdata_scans, interval=50,
                                   blit=False, repeat=False)
@@ -40,7 +41,8 @@ class ParticleMap(object):
         self.resample_period = resample_period
 
     def update(self, message):
-        print(self.i)
+        print(self.i, end='\r') 
+        sys.stdout.flush()
         if self.i % self.resample_period == 0:# Resample and plot state
             self.particle_list = mcl.mcl_update(self.particle_list, message, resample=True,
                                                 target_particles=self.target_particles) # Update
