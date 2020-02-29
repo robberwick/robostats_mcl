@@ -327,12 +327,14 @@ class robot_particle():
         self.prev_log_pose = msg_pose # Save previous log pose for delta
         return self.pose
 
-    def new_pose_from_sample_error(self, scale=10, constrainedPose=[0,0,0]):
+    def new_pose_from_sample_error(self, scale=10, constrained_pose=None):
         """Simply perterbs current position"""
         # Calculate and add stochastic theta and forward error
+        if constrained_pose is None:
+            constrained_pose = [0, 0, 0]
         valid_pose=False
-        max_theta = constrainedPose[2]+self.max_theta_error
-        min_theta = constrainedPose[2]-self.max_theta_error
+        max_theta = constrained_pose[2] + self.max_theta_error
+        min_theta = constrained_pose[2] - self.max_theta_error
         
         while not valid_pose:
             new_theta_error = (scale/5) * self.sigma_theta_pct * np.random.normal()
