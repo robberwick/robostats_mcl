@@ -5,3 +5,4 @@ __pycache__
 *.dat
 data/log/*
 data/map/*
+.vscode/*
